@@ -71,8 +71,8 @@ module Globalize
         end
 
         def create_translation_table
-          connection.create_table(translations_table_name) do |t|
-            t.references table_name.sub(/^#{table_name_prefix}/, '').singularize, :null => false, :index => false
+          connection.create_table(translations_table_name, id: primary_key_type) do |t|
+            t.references table_name.sub(/^#{table_name_prefix}/, '').singularize, :null => false, :index => false, :type => primary_key_type
             t.string :locale, :null => false
             t.timestamps :null => false
           end
@@ -114,7 +114,7 @@ module Globalize
 
         def move_data_to_translation_table
           model.find_each do |record|
-            translation = record.translation_for(I18n.locale) || record.translations.build(:locale => I18n.locale)
+            translation = record.translation_for(I18n.default_locale) || record.translations.build(:locale => I18n.default_locale)
             fields.each do |attribute_name, attribute_type|
               translation[attribute_name] = record.read_attribute(attribute_name, {:translated => false})
             end
@@ -144,6 +144,10 @@ module Globalize
             type = (options.is_a? Hash) ? options[:type] : options
             raise BadFieldType.new(name, type) unless valid_field_type?(name, type)
           end
+        end
+
+        def primary_key_type
+          column_type(model.primary_key).to_sym
         end
 
         def column_type(name)
